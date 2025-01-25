@@ -138,11 +138,11 @@ export default function(hljs) {
     contains: [], // defined later
     variants: [
       {
-        begin: /_{2}/,
+        begin: /_{2}(?!\s)/,
         end: /_{2}/
       },
       {
-        begin: /\*{2}/,
+        begin: /\*{2}(?!\s)/,
         end: /\*{2}/
       }
     ]
@@ -152,11 +152,11 @@ export default function(hljs) {
     contains: [], // defined later
     variants: [
       {
-        begin: /\*(?!\*)/,
+        begin: /\*(?![*\s])/,
         end: /\*/
       },
       {
-        begin: /_(?!_)/,
+        begin: /_(?![_\s])/,
         end: /_/,
         relevance: 0
       }
@@ -216,6 +216,12 @@ export default function(hljs) {
     end: '$'
   };
 
+  const ENTITY = {
+    //https://spec.commonmark.org/0.31.2/#entity-references
+    scope: 'literal',
+    match: /&([a-zA-Z0-9]+|#[0-9]{1,7}|#[Xx][0-9a-fA-F]{1,6});/
+  };
+
   return {
     name: 'Markdown',
     aliases: [
@@ -233,7 +239,8 @@ export default function(hljs) {
       CODE,
       HORIZONTAL_RULE,
       LINK,
-      LINK_REFERENCE
+      LINK_REFERENCE,
+      ENTITY
     ]
   };
 }

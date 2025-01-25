@@ -47,7 +47,8 @@ export default function(hljs) {
         nextChar === "<" ||
         // the , gives away that this is not HTML
         // `<T, A extends keyof T, V>`
-        nextChar === ",") {
+        nextChar === ","
+        ) {
         response.ignoreMatch();
         return;
       }
@@ -65,10 +66,18 @@ export default function(hljs) {
       // `<blah />` (self-closing)
       // handled by simpleSelfClosing rule
 
-      // `<From extends string>`
-      // technically this could be HTML, but it smells like a type
       let m;
       const afterMatch = match.input.substring(afterMatchIndex);
+
+      // some more template typing stuff
+      //  <T = any>(key?: string) => Modify<
+      if ((m = afterMatch.match(/^\s*=/))) {
+        response.ignoreMatch();
+        return;
+      }
+
+      // `<From extends string>`
+      // technically this could be HTML, but it smells like a type
       // NOTE: This is ugh, but added specifically for https://github.com/highlightjs/highlight.js/issues/3276
       if ((m = afterMatch.match(/^\s+extends\s+/))) {
         if (m.index === 0) {
@@ -124,7 +133,7 @@ export default function(hljs) {
     contains: [] // defined later
   };
   const HTML_TEMPLATE = {
-    begin: 'html`',
+    begin: '\.?html`',
     end: '',
     starts: {
       end: '`',
@@ -137,7 +146,7 @@ export default function(hljs) {
     }
   };
   const CSS_TEMPLATE = {
-    begin: 'css`',
+    begin: '\.?css`',
     end: '',
     starts: {
       end: '`',
@@ -147,6 +156,19 @@ export default function(hljs) {
         SUBST
       ],
       subLanguage: 'css'
+    }
+  };
+  const GRAPHQL_TEMPLATE = {
+    begin: '\.?gql`',
+    end: '',
+    starts: {
+      end: '`',
+      returnEnd: false,
+      contains: [
+        hljs.BACKSLASH_ESCAPE,
+        SUBST
+      ],
+      subLanguage: 'graphql'
     }
   };
   const TEMPLATE_STRING = {
@@ -210,7 +232,10 @@ export default function(hljs) {
     hljs.QUOTE_STRING_MODE,
     HTML_TEMPLATE,
     CSS_TEMPLATE,
+    GRAPHQL_TEMPLATE,
     TEMPLATE_STRING,
+    // Skip numbers when they are part of a variable name
+    { match: /\$\d+/ },
     NUMBER,
     // This is intentional:
     // See https://github.com/highlightjs/highlight.js/issues/3288
@@ -231,7 +256,7 @@ export default function(hljs) {
   const PARAMS_CONTAINS = SUBST_AND_COMMENTS.concat([
     // eat recursive parens in sub expressions
     {
-      begin: /\(/,
+      begin: /(\s*)\(/,
       end: /\)/,
       keywords: KEYWORDS,
       contains: ["self"].concat(SUBST_AND_COMMENTS)
@@ -239,7 +264,8 @@ export default function(hljs) {
   ]);
   const PARAMS = {
     className: 'params',
-    begin: /\(/,
+    // convert this to negative lookbehind in v12
+    begin: /(\s*)\(/, // to match the parms with
     end: /\)/,
     excludeBegin: true,
     excludeEnd: true,
@@ -360,9 +386,10 @@ export default function(hljs) {
       /\b/,
       noneOf([
         ...ECMAScript.BUILT_IN_GLOBALS,
-        "super"
-      ]),
-      IDENT_RE, regex.lookahead(/\(/)),
+        "super",
+        "import"
+      ].map(x => `${x}\\s*\\(`)),
+      IDENT_RE, regex.lookahead(/\s*\(/)),
     className: "title.function",
     relevance: 0
   };
@@ -424,7 +451,7 @@ export default function(hljs) {
   };
 
   return {
-    name: 'Javascript',
+    name: 'JavaScript',
     aliases: ['js', 'jsx', 'mjs', 'cjs'],
     keywords: KEYWORDS,
     // this will be extended by TypeScript
@@ -441,13 +468,16 @@ export default function(hljs) {
       hljs.QUOTE_STRING_MODE,
       HTML_TEMPLATE,
       CSS_TEMPLATE,
+      GRAPHQL_TEMPLATE,
       TEMPLATE_STRING,
       COMMENT,
+      // Skip numbers when they are part of a variable name
+      { match: /\$\d+/ },
       NUMBER,
       CLASS_REFERENCE,
       {
-        className: 'attr',
-        begin: IDENT_RE + regex.lookahead(':'),
+        scope: 'attr',
+        match: IDENT_RE + regex.lookahead(':'),
         relevance: 0
       },
       FUNCTION_VARIABLE,
@@ -480,7 +510,7 @@ export default function(hljs) {
                     skip: true
                   },
                   {
-                    begin: /\(/,
+                    begin: /(\s*)\(/,
                     end: /\)/,
                     excludeBegin: true,
                     excludeEnd: true,
